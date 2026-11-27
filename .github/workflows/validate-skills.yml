@@ -13,19 +13,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: 校验 SKILL.md 结构
         run: python scripts/validate_skills.py .
-      - name: 语法检查 scripts/*.py
-        run: |
-          python -m pip install --quiet py_compile >/dev/null 2>&1 || true
-          python - <<'PY'
-          import pathlib, py_compile, sys
-          bad = []
-          for p in pathlib.Path(".").rglob("*.py"):
-              try:
-                  py_compile.compile(str(p), doraise=True)
-              except py_compile.PyCompileError as e:
-                  bad.append(f"{p}: {e}")
-          print("\n".join(bad) if bad else "python 语法检查通过")
-          sys.exit(1 if bad else 0)
-          PY
+
+      - name: 语法检查所有 Python 脚本
+        run: python -m compileall -q .
