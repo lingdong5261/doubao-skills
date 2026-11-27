@@ -1,0 +1,239 @@
+{
+  "apis": [
+    {
+      "name": "goodsSearch",
+      "description": "按尺寸、材质、品类或预算查找家具商品，返回匹配款式的价格、库存与页面路径。用户说「想找…」「有没有…」「多少钱以内的…」时先用它。",
+      "_meta": {
+        "ui": {
+          "pagePath": "/pages/goods/list"
+        },
+        "context": {
+          "query": { "desc": "本轮用户原话，用于核对关键词" }
+        }
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "搜索关键词，如「1.8米实木床」「布艺沙发」；可直接传用户原话里的名词部分"
+          },
+          "category": {
+            "type": "string",
+            "description": "品类：客厅、卧室、餐厅、储物、椅凳，可不传"
+          },
+          "maxPrice": {
+            "type": "number",
+            "description": "预算上限（元），用户说「4000 以内」时传 4000"
+          },
+          "size": {
+            "type": "string",
+            "description": "尺寸要求，单位毫米，如 1800 表示 1.8 米；可不传"
+          },
+          "limit": {
+            "type": "number",
+            "description": "返回条数，1–5，默认 3"
+          }
+        },
+        "required": ["keyword"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "number", "description": "命中数量" },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "price": { "type": "number" },
+                "priceText": { "type": "string" },
+                "sizeText": { "type": "string" },
+                "stockTotal": { "type": "number" },
+                "tags": { "type": "array", "items": { "type": "string" } },
+                "pagePath": {
+                  "type": "string",
+                  "format": "page-link",
+                  "x-link-text-field": "title"
+                },
+                "skus": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "skuId": { "type": "string" },
+                      "name": { "type": "string" },
+                      "price": { "type": "number" },
+                      "stock": { "type": "number" },
+                      "madeToOrder": { "type": "boolean" },
+                      "leadTimeDays": { "type": "number" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "goodsDetail",
+      "description": "查某一款商品的材质、尺寸、卖点、送装规则与全部规格库存。用户已经锁定款式、问细节时用。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "商品 id，从 goodsSearch 的结果里拿，如 g-bed" }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "price": { "type": "number" },
+          "material": { "type": "string" },
+          "sizeText": { "type": "string" },
+          "sellingPoints": { "type": "array", "items": { "type": "string" } },
+          "delivery": { "type": "string" },
+          "skus": { "type": "array", "items": { "type": "object" } }
+        }
+      }
+    },
+    {
+      "name": "stockCheck",
+      "description": "查某个具体 SKU 的实时库存、是否按单生产、交期。回答「还有货吗」「几天能到」必须用它，不能凭印象。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skuId": { "type": "string", "description": "SKU id，如 sku-sofa-green" }
+        },
+        "required": ["skuId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "skuId": { "type": "string" },
+          "name": { "type": "string" },
+          "stock": { "type": "number" },
+          "inStock": { "type": "boolean" },
+          "madeToOrder": { "type": "boolean" },
+          "leadTimeDays": { "type": "number" }
+        }
+      }
+    },
+    {
+      "name": "deliveryQuote",
+      "description": "按收货区域与楼层计算送货上门和安装费用。用户问「送到几楼多少钱」「能不能送上楼」时用。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skuId": { "type": "string", "description": "要送装的 SKU；只知商品时可改传 goodsId" },
+          "goodsId": { "type": "string", "description": "商品 id，skuId 不确定时用" },
+          "address": { "type": "string", "description": "收货地址或小区，至少带区域名，如「增城荔城」" },
+          "floor": { "type": "number", "description": "楼层，1 起，默认 1" }
+        },
+        "required": ["address"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "zone": { "type": "string" },
+          "base": { "type": "number" },
+          "zoneFee": { "type": "number" },
+          "floorFee": { "type": "number" },
+          "total": { "type": "number" },
+          "arriveDays": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "orderCreate",
+      "description": "创建待支付订单。必须已经确认好 SKU、数量和收货地址；地址缺失时应先追问，不要臆造。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skuId": { "type": "string", "description": "要买的 SKU" },
+          "qty": { "type": "number", "description": "数量，默认 1" },
+          "address": { "type": "string", "description": "收货地址，含区域与小区" },
+          "floor": { "type": "number", "description": "楼层" },
+          "note": { "type": "string", "description": "备注，如「电梯不可用」" }
+        },
+        "required": ["skuId", "address"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "orderNo": { "type": "string" },
+          "title": { "type": "string" },
+          "skuName": { "type": "string" },
+          "qty": { "type": "number" },
+          "total": { "type": "number" },
+          "totalText": { "type": "string" },
+          "status": { "type": "string" },
+          "pagePath": {
+            "type": "string",
+            "format": "page-link",
+            "x-link-text-field": "orderNo"
+          }
+        }
+      }
+    },
+    {
+      "name": "orderTrack",
+      "description": "查询订单状态与送装进度。用户给订单号就用订单号，没给则查最近订单。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orderNo": { "type": "string", "description": "订单号，如 M261125-001" }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "orderNo": { "type": "string" },
+                "title": { "type": "string" },
+                "total": { "type": "number" },
+                "statusText": { "type": "string" },
+                "pagePath": {
+                  "type": "string",
+                  "format": "page-link",
+                  "x-link-text-field": "orderNo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "storeInfo",
+      "description": "门店地址、营业时间、可否到店试坐、售后承诺。用户问「店在哪」「几点关门」时用。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "hours": { "type": "string" },
+          "phone": { "type": "string" },
+          "services": { "type": "array", "items": { "type": "string" } },
+          "pagePath": { "type": "string" }
+        }
+      }
+    }
+  ]
+}
