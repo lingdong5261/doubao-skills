@@ -39,6 +39,30 @@ python scripts/daily_report.py --base-token <base_token> --date 2026-11-27
 
 **goodsSkill**：是嵌在小程序项目里的技能模块，依赖项目自身的 `pages/` 页面路径与后端接口，单独拷贝出来不能直接跑，需要放回 `miniprogram/skills/` 下使用。
 
+## 新增技能
+
+1. 在根目录建文件夹，目录名用小写字母 + 连字符（如 `lark-invoice-check`），放入 `SKILL.md`。
+2. `SKILL.md` 开头写 front matter，`name` 必须与目录名一致：
+
+```yaml
+---
+name: lark-invoice-check
+description: 一句话说明做什么、什么时候触发（不超过 1024 字符）
+---
+```
+
+3. 细节内容拆到 `references/`，可执行脚本放 `scripts/`，正文里的相对链接要能点开。
+4. 本地跑一遍校验，通过后提交：
+
+```bash
+python scripts/validate_skills.py .
+```
+
+## 校验与许可
+
+- CI：`.github/workflows/validate-skills.yml`，push 到 `main` 和 PR 时自动跑 `scripts/validate_skills.py`，检查 front matter 完整性、`name` 与目录名是否一致、description 长度、正文相对链接是否失效，并对所有 `*.py` 做语法编译检查。
+- 许可：MIT，见 [LICENSE](LICENSE)。
+
 ## Notes
 
 - 两个技能都只含指令与代码，不含任何密钥；接口地址与 token 由运行环境注入。
